@@ -20,7 +20,10 @@ def get_files(root):
         files.append(f)
   # Process the files in batches
   for i in range(0, len(files) / BATCH + 1):
-    get_content(files[BATCH * i : min(len(files), BATCH * (i + 1))])
+    start = BATCH * i
+    stop = min(len(files), BATCH * (i + 1))
+    if start < stop:
+      get_content(files[start:stop])
   return files
   
 def ok_to_index(filename):
