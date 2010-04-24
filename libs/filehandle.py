@@ -1,10 +1,7 @@
 import os, commands
 
 from libs.utils import strip_tags, get_md5
-# File types to be indexed
-INDEX = ['pdf', 'doc', 'html', 'txt']
-# How many files to send to tika in one batch
-BATCH = 200
+from config import *
 
 def get_files(root):
   ''' Create a list of file dictionaries containing path and content '''
@@ -19,9 +16,9 @@ def get_files(root):
         f['path'] = path
         files.append(f)
   # Process the files in batches
-  for i in range(0, len(files) / BATCH + 1):
-    start = BATCH * i
-    stop = min(len(files), BATCH * (i + 1))
+  for i in range(0, len(files) / BATCH_TIKA + 1):
+    start = BATCH_TIKA * i
+    stop = min(len(files), BATCH_TIKA * (i + 1))
     if start < stop:
       get_content(files[start:stop])
   return files
@@ -30,7 +27,7 @@ def ok_to_index(filename):
   ''' Decide if to index the content or skip it'''
   extension = filename.split('.')[-1]
   extension = extension.lower()
-  return (extension in INDEX)
+  return (extension in INDEX_TYPES)
 
 def get_content(files):
   ''' Given a batch of files, send them to tika 
