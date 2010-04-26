@@ -54,7 +54,7 @@ class IndexFiles(object):
         print '\nIndexing %s file(s) in %s' % (len(batch), language)
       else:
         print '\nIndexing %s file(s) without a detectable language' % len(batch)
-        language = 'English'
+        language = DEFAULT_LANGUAGE
         
       # Initialize analyzer with a language-specific stemmer
       analyzer = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
