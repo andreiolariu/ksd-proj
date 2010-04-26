@@ -1,45 +1,100 @@
-#!/usr/bin/env python
-from lucene import \
-    QueryParser, IndexSearcher, StandardAnalyzer, SimpleFSDirectory, File, \
-    VERSION, initVM, Version
+import lucene
 
+from config import *
 
-"""
-This script is loosely based on the Lucene (java implementation) demo class 
-org.apache.lucene.demo.SearchFiles.  It will prompt for a search query, then it
-will search the Lucene index in the current directory called 'index' for the
-search query entered against the 'contents' field.  It will then display the
-'path' and 'name' fields for each of the hits it finds in the index.  Note that
-search.close() is currently commented out because it causes a stack overflow in
-some cases.
-"""
-def run(searcher, analyzer):
-    while True:
-        print
-        print "Hit enter with no input to quit."
-        command = raw_input("Query:")
-        if command == '':
-            return
+def parse_command(command):
+  '''
+    Receives the input line command given by the user and parses it to get
+    the keyword and the languages to search in
+    
+    Command examples:
+      keyword  --> searches in the default language
+      keyword -l all  --> searches in all languages
+      keyword -l english spanish romanian  --> searches in these 3 languages
+  '''
+  params = command.split(' -l ')
+  keyword = params[0]
+  if len(params) == 1:
+    # No given language - use default
+    languages = [DEFAULT_LANGUAGE]
+  else:
+    l = params[1].lower()
+    if l == 'all':
+      languages = SUPPORTED_LANGUAGES
+    else:
+      # A list of languages -> parse them
+      l = l.split(' ')
+      languages = []
+      for language in l:
+        if language in SUPPORTED_LANGUAGES:
+          languages.append(language)
+      if not languages:
+        languages = SUPPORTED_LANGUAGES
+  # Capitalize languages
+  for i in range(0, len(languages)):
+    languages[i] = languages[i].capitalize()
+  return (keyword, languages)
 
-        print
-        print "Searching for:", command
-        query = QueryParser(Version.LUCENE_CURRENT, "contents",
-                            analyzer).parse(command)
-        scoreDocs = searcher.search(query, 50).scoreDocs
-        print "%s total matching documents." % len(scoreDocs)
-
-        for scoreDoc in scoreDocs:
-            doc = searcher.doc(scoreDoc.doc)
-            print 'path:', doc.get("path"), 'name:', doc.get("name")
-
+def run(searcher):
+  while True:
+    print
+    print "Hit enter with no input to quit."
+    command = raw_input("Query:")
+    if command == '':
+      return
+    # Get the keyword and the list of languages
+    keyword, languages = parse_command(command)
+    print
+    if len(languages) < 4:
+      print "Searching for \"%s\" in the language(s) %s" % \
+              (keyword, ', '.join(languages))
+    else:
+      print "Searching for \"%s\" in %s languages" % \
+              (keyword, len(languages))
+    
+    # Construct a list of search results for the requested languages
+    scoreDocs = []
+    total_count = 0
+    for language in languages:
+      analyzer = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
+                                        language)
+      filter = lucene.FieldCacheTermsFilter("language", [language])
+      query = lucene.QueryParser(lucene.Version.LUCENE_CURRENT, "content",
+                                analyzer).parse(keyword)
+      results = searcher.search(query, filter, 50).scoreDocs
+      if len(results) > 0:
+        total_count += len(results)
+        scoreDocs.append({'query': query,
+                          'analyzer': analyzer,
+                          'results': results,
+                          'language': language})
+    print "%s total matching documents." % total_count
+    
+    # Format and print the results with excerpt highlighting
+    formatter = lucene.SimpleHTMLFormatter("<<<", ">>>")
+    fragmenter = lucene.SimpleFragmenter(50)
+    for dex in scoreDocs:
+      print 'Results in %s:' % dex['language']
+      i = 1
+      for scoreDoc in dex['results']:
+        doc = searcher.doc(scoreDoc.doc)
+        stream = lucene.TokenSources.getAnyTokenStream(searcher.getIndexReader(),\
+                                scoreDoc.doc, 'content', doc, dex['analyzer'])
+        content = doc['content']
+        scorer = lucene.QueryScorer(dex['query'])
+        highlighter = lucene.Highlighter(formatter, scorer)
+        highlighter.setTextFragmenter(fragmenter)
+        fragment = highlighter.getBestFragment(stream, content)
+        print '%s)   path: %s, name: %s' % (i, doc.get("path"), doc.get("name"))
+        print '     fragment: %s' % fragment
+        i += 1
 
 if __name__ == '__main__':
-    STORE_DIR = "index"
-    initVM()
-    print 'lucene', VERSION
-    directory = SimpleFSDirectory(File(STORE_DIR))
-    searcher = IndexSearcher(directory, True)
-    analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
-    run(searcher, analyzer)
-    searcher.close()
+  STORE_DIR = "index"
+  lucene.initVM()
+  print 'lucene', lucene.VERSION
+  directory = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
+  searcher = lucene.IndexSearcher(directory, True)
+  run(searcher)
+  searcher.close()
 

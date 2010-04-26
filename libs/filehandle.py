@@ -53,6 +53,7 @@ def get_content(files):
       path = path.replace('\n', ' ')
       # Strip tags
       content = strip_tags(content.replace('\n', ' '))
+      content = content.strip()
     except:
       print 'weird: %s' % piece[:100]
     key = get_md5(path)                    

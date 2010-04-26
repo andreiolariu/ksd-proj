@@ -3,7 +3,7 @@ SUPPORTED_LANGUAGES = ['danish', 'dutch', 'english', 'finnish', \
                       'french', 'german', 'hungarian', 'italian', \
                       'norwegian', 'portuguese', 'romanian', \
                       'russian', 'spanish', 'swedish', 'turkish']
-# Default language
+# Default language - capfirst
 DEFAULT_LANGUAGE = 'English'
 
 # File types to be indexed

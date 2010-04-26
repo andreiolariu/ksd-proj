@@ -39,6 +39,12 @@ class IndexFiles(object):
     # Get content for all files
     print '\nFetching content'
     docs = self.fetch_files(root)
+    # Remove files with no content
+    tmp = []
+    for doc in docs:
+      if doc['content']:
+        tmp.append(doc)
+    docs = tmp
     # Detect language for each file and group by it
     batches = self.detect_language(docs)
     
@@ -48,7 +54,7 @@ class IndexFiles(object):
         print '\nIndexing %s file(s) in %s' % (len(batch), language)
       else:
         print '\nIndexing %s file(s) without a detectable language' % len(batch)
-        language = DEFAULT_LANGUAGE # Use the default language
+        language = 'English'
         
       # Initialize analyzer with a language-specific stemmer
       analyzer = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
@@ -101,8 +107,9 @@ class IndexFiles(object):
                              lucene.Field.Store.YES,
                              lucene.Field.Index.NOT_ANALYZED))
         doc.add(lucene.Field("content", f['content'],
-                             lucene.Field.Store.NO,
-                             lucene.Field.Index.ANALYZED))
+                             lucene.Field.Store.YES,
+                             lucene.Field.Index.ANALYZED,
+                             lucene.Field.TermVector.WITH_POSITIONS_OFFSETS))
         docs.append(doc)
       except:
         print 'could not index %s' % f['path']
