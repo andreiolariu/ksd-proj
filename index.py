@@ -59,7 +59,7 @@ class IndexFiles(object):
       # Initialize analyzer with a language-specific stemmer
       analyzer = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
                                         language)
-      writer = lucene.IndexWriter(self.store, analyzer, True,
+      writer = lucene.IndexWriter(self.store, analyzer,
                                 lucene.IndexWriter.MaxFieldLength.LIMITED)
       writer.setMaxFieldLength(1048576)
       
@@ -68,7 +68,7 @@ class IndexFiles(object):
         writer.addDocument(document)
       writer.optimize()
       writer.close()
-      
+    
     ticker.tick = False
 
   def detect_language(self, docs):
