@@ -3,18 +3,23 @@ import os, commands
 from libs.utils import strip_tags, get_md5
 from config import *
 
-def get_files(root):
-  ''' Create a list of file dictionaries containing path and content '''
+def get_files(root, history):
+  ''' Create a list of file dictionaries containing path and content 
+  Skip files which didn't change from the last indexation
+  '''
   files = []
   # Crawl directory for files
   for root, dirnames, filenames in os.walk(root):
     for filename in filenames:
       if ok_to_index(filename):
         path = os.path.join(root, filename)
-        f = {}
-        f['filename'] = filename
-        f['path'] = path
-        files.append(f)
+        last_modified = os.stat(path).st_mtime
+        if path not in history or history[path] < last_modified:
+          f = {}
+          f['filename'] = filename
+          f['path'] = path
+          f['last_modified'] = last_modified
+          files.append(f)
   # Process the files in batches
   for i in range(0, len(files) / BATCH_TIKA + 1):
     start = BATCH_TIKA * i

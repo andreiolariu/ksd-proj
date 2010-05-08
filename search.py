@@ -90,7 +90,6 @@ def run(searcher):
         i += 1
 
 if __name__ == '__main__':
-  STORE_DIR = "index"
   lucene.initVM()
   print 'lucene', lucene.VERSION
   directory = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))

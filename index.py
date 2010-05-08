@@ -28,6 +28,22 @@ class IndexFiles(object):
       os.mkdir(storeDir)
     self.store = lucene.SimpleFSDirectory(lucene.File(storeDir))
     
+  def get_history(self):
+    hist = {}
+    searcher = lucene.IndexSearcher(self.store, True)
+    query = lucene.MatchAllDocsQuery()
+    # TODO: replace 50000 with actual document count
+    docs = searcher.search(query, 50000).scoreDocs
+    for doc in docs:
+      doc = searcher.doc(doc.doc)
+      hist[doc['path']] = doc['last_modified']
+      if not hist[doc['path']]:
+        hist[doc['path']] = 0
+      else:
+        hist[doc['path']] = int(hist[doc['path']])
+    searcher.close()
+    return hist
+    
   def index(self, root):
     ''' 
       Index files in the folder root
@@ -36,9 +52,11 @@ class IndexFiles(object):
     ticker = Ticker()
     threading.Thread(target=ticker.run).start()
     
+    # Get list of files indexed + their last modified ts
+    history = self.get_history()
     # Get content for all files
     print '\nFetching content'
-    docs = self.fetch_files(root)
+    docs = self.fetch_files(root, history)
     # Remove files with no content
     tmp = []
     for doc in docs:
@@ -65,7 +83,12 @@ class IndexFiles(object):
       
       # Index files
       for document in batch:
-        writer.addDocument(document)
+        if document['path'] in history:
+          print 'updating %s' % document['path']
+          writer.updateDocument(lucene.Term("path", document['path']), document)
+        else:
+          print 'new file'
+          writer.addDocument(document)
       writer.optimize()
       writer.close()
     
@@ -94,8 +117,8 @@ class IndexFiles(object):
       batches[language].append(doc)
     return batches
         
-  def fetch_files(self, root):
-    files_list = get_files(root)
+  def fetch_files(self, root, history):
+    files_list = get_files(root, history)
     docs = []
     for f in files_list:
       try:
@@ -110,9 +133,12 @@ class IndexFiles(object):
                              lucene.Field.Store.YES,
                              lucene.Field.Index.ANALYZED,
                              lucene.Field.TermVector.WITH_POSITIONS_OFFSETS))
+        doc.add(lucene.Field("last_modified", str(int(f['last_modified'])),
+                             lucene.Field.Store.YES,
+                             lucene.Field.Index.NOT_ANALYZED))
         docs.append(doc)
-      except:
-        print 'could not index %s' % f['path']
+      except Exception, e:
+        print 'could not index %s: %s' % (f['path'], e)
     return docs
 
 if __name__ == '__main__':
@@ -124,7 +150,7 @@ if __name__ == '__main__':
   print 'lucene', lucene.VERSION
   start = datetime.now()
   #try:
-  indexer = IndexFiles('index')
+  indexer = IndexFiles(STORE_DIR)
   indexer.index(sys.argv[1])
   end = datetime.now()
   print end - start
