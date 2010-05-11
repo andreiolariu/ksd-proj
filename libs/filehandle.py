@@ -3,7 +3,16 @@ import os, commands
 from libs.utils import strip_tags, get_md5
 from config import *
 
-def get_files(root, history):
+def get_last_modified(root):
+  ''' Gets the latest last_modified timestamp for the files in a folder ''' 
+  last_modified = 0
+  for root, dirnames, filenames in os.walk(root):
+    for filename in filenames:
+      path = os.path.join(root, filename)
+      last_modified = max(last_modified, os.stat(path).st_mtime)
+  return last_modified
+
+def get_files(root, history, last_modified_global):
   ''' Create a list of file dictionaries containing path and content 
   Skip files which didn't change from the last indexation
   '''
@@ -14,12 +23,13 @@ def get_files(root, history):
       if ok_to_index(filename):
         path = os.path.join(root, filename)
         last_modified = os.stat(path).st_mtime
-        if path not in history or history[path] < last_modified:
+        if path not in history or last_modified_global < last_modified:
           f = {}
           f['filename'] = filename
           f['path'] = path
-          f['last_modified'] = last_modified
           files.append(f)
+        if path in history:
+          history.remove(path)
   # Process the files in batches
   for i in range(0, len(files) / BATCH_TIKA + 1):
     start = BATCH_TIKA * i
