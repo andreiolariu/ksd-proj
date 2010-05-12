@@ -1,4 +1,5 @@
-  import gzip
+import os
+import gzip
 import simplejson as json
 
 from libs.filehandle import ok_to_index
