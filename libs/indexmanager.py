@@ -1,44 +1,81 @@
 import os
 import gzip
+import time
 import simplejson as json
 
 from libs.filehandle import ok_to_index
 
 import config
 
-class IndexManager(object):
+class CachedFileDB(object):
 
-  def __init__(self):
-    # Temporary remember the timestamp of each file. This is needed
-    # because of the difference between scanning the folder and actually
-    # indexing those files.
-    self.cache = {}
+  def __init__(self, label, time=0):
+    self.db_path = '%s/%s.gz' % (config.STORE_DIR, label)
+    self._last_read = 0
+    self._time = time
 
   def _read(self):
+    if time.time() - self._last_read < self._time:
+      # Too soon to re-read the database.
+      return
+
     try:
-      f = gzip.open('%s/files.gz' % config.STORE_DIR, 'rb')
+      f = gzip.open(self.db_path, 'rb')
       content = f.read()
       f.close()
+      self._last_read = time.time()
     except:
       content = None
 
     if content:
-      obj = json.loads(content)
-      self.indexed = obj[0]
-      self.followed = obj[1]
+      self.data = json.loads(content)
     else:
-      self.indexed = {}
-      self.followed = []
+      self.data = None
 
   def _save(self):
     if not os.path.exists(config.STORE_DIR):
       # Create the store dir if missing.
       os.mkdir(config.STORE_DIR)
 
-    f = gzip.open('%s/files.gz' % config.STORE_DIR, 'wb')
-    obj = [self.indexed, self.followed]
-    f.write(json.dumps(obj))
+    f = gzip.open(self.db_path, 'wb')
+    f.write(json.dumps(self.data))
     f.close()
+
+class FolderManager(CachedFileDB):
+
+  def __init__(self):
+    CachedFileDB.__init__(self, 'followed')
+
+  def follow(self, path):
+    for following in self.data:
+      # We are already following one this folder through one of its parents.
+      if path.startswith(following):
+        return
+    self.data.append(path)
+    self._save()
+
+  def unfollow(self, path):
+    try:
+      self.data.remove(path)
+      self._save()
+    except:
+      pass
+
+  def get_followed(self):
+    self._read()
+    if not self.data:
+      return []
+    else:
+      return self.data
+
+class IndexManager(CachedFileDB):
+
+  def __init__(self):
+    CachedFileDB.__init__(self, 'files')
+    # Temporary remember the timestamp of each file. This is needed
+    # because of the difference between scanning the folder and actually
+    # indexing those files.
+    self.cache = {}
 
   def _scan_folder(self, root):
     files = {}
@@ -63,11 +100,11 @@ class IndexManager(object):
     to_remove = []
     to_update = []
     for filename, last_modified in files.items():
-      if filename not in self.indexed:
+      if filename not in self.data:
         to_add.append(filename)
       elif last_modified > indexed[filename]:
         to_update.append(filename)
-    for filename in self.indexed:
+    for filename in self.data:
       if filename.startswith(root) and filename not in files:
         to_remove.append(filename)
 
@@ -91,48 +128,10 @@ class IndexManager(object):
         last_modified = self.cache.pop(filename)
       else:
         last_modified = os.stat(path).st_mtime
-      self.indexed[filename] = last_modified
+      self.data[filename] = last_modified
 
     for filename in removed:
-      if filename in self.indexed:
-        del self.indexed[filename]
+      if filename in self.data:
+        del self.data[filename]
 
     self._save()
-
-  def follow_folder(self, path):
-    for following in self.followed:
-      # We are already following one this folder through one of its parents.
-      if path.startswith(following):
-        return
-    self.followed.append(path)
-
-    self._save()
-
-  def unfollow_folder(self, path):
-    try:
-      self.followed.remove(path)
-
-      self._save()
-    except:
-      pass
-
-  def get_followed_folder(self):
-    self._read()
-
-    return self.followed
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # end of file
