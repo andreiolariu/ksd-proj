@@ -25,9 +25,15 @@ def get_devices():
   last_modified = max(new_last_modified, last_modified)
   return res
 
+def test(path):
+  if os.getcwd().startswith(path):
+    return True
+
 last_modified = time.time()
 while True:
   A = get_devices()
-  if len(A) > 0:
-    print A
+  for path in A:
+    if test(path):
+      run('python index.py %s' % path)
+      last_modified = time.time()
   time.sleep(0.8)
