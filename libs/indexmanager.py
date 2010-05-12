@@ -1,9 +1,9 @@
-import gzip
+  import gzip
 import simplejson as json
 
 from libs.filehandle import ok_to_index
 
-from config import STORE_DIR
+import config
 
 class IndexManager(object):
 
@@ -15,24 +15,28 @@ class IndexManager(object):
 
   def _read(self):
     try:
-      f = gzip.open('%s/files.gz' % STORE_DIR, 'rb')
+      f = gzip.open('%s/files.gz' % config.STORE_DIR, 'rb')
       content = f.read()
       f.close()
     except:
       content = None
 
     if content:
-      self.indexed = json.loads(content)
+      obj = json.loads(content)
+      self.indexed = obj[0]
+      self.followed = obj[1]
     else:
       self.indexed = {}
+      self.followed = []
 
   def _save(self):
-    if not os.path.exists(STORE_DIR):
+    if not os.path.exists(config.STORE_DIR):
       # Create the store dir if missing.
-      os.mkdir(STORE_DIR)
+      os.mkdir(config.STORE_DIR)
 
-    f = gzip.open('%s/files.gz' % STORE_DIR, 'wb')
-    f.write(json.dumps(self.indexed))
+    f = gzip.open('%s/files.gz' % config.STORE_DIR, 'wb')
+    obj = [self.indexed, self.followed]
+    f.write(json.dumps(obj))
     f.close()
 
   def _scan_folder(self, root):
@@ -86,13 +90,36 @@ class IndexManager(object):
         last_modified = self.cache.pop(filename)
       else:
         last_modified = os.stat(path).st_mtime
-      self.data[filename] = last_modified
+      self.indexed[filename] = last_modified
 
     for filename in removed:
-      if filename in self.data:
-        del self.data[filename]
+      if filename in self.indexed:
+        del self.indexed[filename]
 
     self._save()
+
+  def follow_folder(self, path):
+    for following in self.followed:
+      # We are already following one this folder through one of its parents.
+      if path.startswith(following):
+        return
+    self.followed.append(path)
+
+    self._save()
+
+  def unfollow_folder(self, path):
+    try:
+      self.followed.remove(path)
+
+      self._save()
+    except:
+      pass
+
+  def get_followed_folder(self):
+    self._read()
+
+    return self.followed
+
 
 
 
