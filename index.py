@@ -4,7 +4,7 @@ from datetime import datetime
 import lucene
 
 from libs.textcat import NGram, _NGram
-from libs.filehandle import get_files
+from libs.filehandle import get_files, get_last_modified
 from config import *
 
 
@@ -26,21 +26,19 @@ class IndexFiles(object):
     # Create index directory
     if not os.path.exists(storeDir):
       os.mkdir(storeDir)
+    self.storeDir = storeDir
     self.store = lucene.SimpleFSDirectory(lucene.File(storeDir))
     
-  def get_history(self):
-    hist = {}
+  def get_indexed_files(self):
+    ''' Return a set of the files found in the index '''
+    hist = set()
     searcher = lucene.IndexSearcher(self.store, True)
     query = lucene.MatchAllDocsQuery()
     # TODO: replace 50000 with actual document count
     docs = searcher.search(query, 50000).scoreDocs
     for doc in docs:
       doc = searcher.doc(doc.doc)
-      hist[doc['path']] = doc['last_modified']
-      if not hist[doc['path']]:
-        hist[doc['path']] = 0
-      else:
-        hist[doc['path']] = int(hist[doc['path']])
+      hist.add(doc['path'])
     searcher.close()
     return hist
     
@@ -52,11 +50,13 @@ class IndexFiles(object):
     ticker = Ticker()
     threading.Thread(target=ticker.run).start()
     
-    # Get list of files indexed + their last modified ts
-    history = self.get_history()
+    # Get list of files indexed
+    indexed_files = self.get_indexed_files()
+    # Get last updated timestamp
+    last_modified = get_last_modified(self.storeDir)
     # Get content for all files
     print '\nFetching content'
-    docs = self.fetch_files(root, history)
+    docs = self.fetch_files(root, indexed_files, last_modified)
     # Remove files with no content
     tmp = []
     for doc in docs:
@@ -83,12 +83,23 @@ class IndexFiles(object):
       
       # Index files
       for document in batch:
-        if document['path'] in history:
+        if document['path'] in indexed_files:
           print 'updating %s' % document['path']
-          writer.updateDocument(lucene.Term("path", document['path']), document)
+          indexed_files.remove(document['path'])
         else:
-          print 'new file'
-          writer.addDocument(document)
+          print 'new file %s' % document['path']
+        writer.updateDocument(lucene.Term("path", document['path']), document)
+      writer.optimize()
+      writer.close()
+      
+    # Remove missing files
+    if indexed_files:
+      analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
+      writer = lucene.IndexWriter(self.store, analyzer, \
+                        lucene.IndexWriter.MaxFieldLength.LIMITED)
+      for path in indexed_files:
+        writer.deleteDocuments(lucene.Term("path", path))
+        print 'deleted %s' % path
       writer.optimize()
       writer.close()
     
@@ -117,8 +128,8 @@ class IndexFiles(object):
       batches[language].append(doc)
     return batches
         
-  def fetch_files(self, root, history):
-    files_list = get_files(root, history)
+  def fetch_files(self, root, indexed_files, last_modified):
+    files_list = get_files(root, indexed_files, last_modified)
     docs = []
     for f in files_list:
       try:
@@ -133,9 +144,6 @@ class IndexFiles(object):
                              lucene.Field.Store.YES,
                              lucene.Field.Index.ANALYZED,
                              lucene.Field.TermVector.WITH_POSITIONS_OFFSETS))
-        doc.add(lucene.Field("last_modified", str(int(f['last_modified'])),
-                             lucene.Field.Store.YES,
-                             lucene.Field.Index.NOT_ANALYZED))
         docs.append(doc)
       except Exception, e:
         print 'could not index %s: %s' % (f['path'], e)

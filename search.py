@@ -56,16 +56,23 @@ def run(searcher):
     scoreDocs = []
     total_count = 0
     for language in languages:
-      analyzer = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
+      analyzer_content = lucene.SnowballAnalyzer(lucene.Version.LUCENE_CURRENT, \
                                         language)
       filter = lucene.FieldCacheTermsFilter("language", [language])
-      query = lucene.QueryParser(lucene.Version.LUCENE_CURRENT, "content",
-                                analyzer).parse(keyword)
+      query_content = lucene.QueryParser(lucene.Version.LUCENE_CURRENT, "content",
+                                analyzer_content).parse(keyword)
+      analyzer_title = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
+      query_title = lucene.WildcardQuery(lucene.Term("name", "*%s*" % keyword))
+      
+      query = lucene.BooleanQuery()
+      query.add(query_content, lucene.BooleanClause.Occur.SHOULD)
+      query.add(query_title, lucene.BooleanClause.Occur.SHOULD)
+              
       results = searcher.search(query, filter, 50).scoreDocs
       if len(results) > 0:
         total_count += len(results)
         scoreDocs.append({'query': query,
-                          'analyzer': analyzer,
+                          'analyzer': analyzer_content,
                           'results': results,
                           'language': language})
     print "%s total matching documents." % total_count
@@ -85,7 +92,7 @@ def run(searcher):
         highlighter = lucene.Highlighter(formatter, scorer)
         highlighter.setTextFragmenter(fragmenter)
         fragment = highlighter.getBestFragment(stream, content)
-        print '%s)   path: %s, name: %s' % (i, doc.get("path"), doc.get("name"))
+        print '%s)   path: %s' % (i, doc.get("path"))
         print '     fragment: %s' % fragment
         i += 1
 
