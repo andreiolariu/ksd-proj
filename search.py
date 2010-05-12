@@ -1,6 +1,9 @@
+import time
+
 import lucene
 
 from config import *
+from libs.filehandle import get_last_modified
 
 def parse_command(command):
   '''
@@ -99,6 +102,15 @@ def run(searcher):
 if __name__ == '__main__':
   lucene.initVM()
   print 'lucene', lucene.VERSION
+  
+  passed = time.time() - get_last_modified(STORE_DIR)
+  passed = int(passed / 86400)
+  if passed == 0:
+    print 'Index updated less than a day ago.'
+  elif passed == 1:
+    print 'Index updated yesterday.'
+  else:
+    print 'Index updated %s days ago.' % passed
   directory = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
   searcher = lucene.IndexSearcher(directory, True)
   run(searcher)
