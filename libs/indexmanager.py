@@ -65,7 +65,7 @@ class IndexManager(object):
     for filename, last_modified in files.items():
       if filename not in self.indexed:
         to_add.append(filename)
-      elif last_modified > indexed[filename]:
+      elif last_modified > self.indexed[filename]:
         to_update.append(filename)
     for filename in self.indexed:
       if filename.startswith(root) and filename not in files:
