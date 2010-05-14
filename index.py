@@ -44,12 +44,6 @@ class IndexFiles(object):
     # Get content for all files
     print '\nFetching content'
     docs = self.fetch_files(root, history)
-    # Remove files with no content
-    # tmp = []
-    # for doc in docs:
-    #   if doc['content']:
-    #     tmp.append(doc)
-    # docs = tmp
     # Detect language for each file and group by it
     batches = self.detect_language(docs)
     
@@ -84,6 +78,7 @@ class IndexFiles(object):
       indexed = []
       for document in batch:
         writer.addDocument(document)
+        print document['path']
         indexed.append(document['path'])
       writer.optimize()
       writer.close()
@@ -104,9 +99,10 @@ class IndexFiles(object):
         language = l.classify(str(doc['content'][:1000].encode('utf8')))
       if language not in SUPPORTED_LANGUAGES:
         language = ''
-      if language:
-        language = language.capitalize()
-        doc.add(lucene.Field("language", language,
+      if not language:
+        language = DEFAULT_LANGUAGE
+      language = language.capitalize()
+      doc.add(lucene.Field("language", language,
                              lucene.Field.Store.YES,
                              lucene.Field.Index.NOT_ANALYZED))
       if language not in batches:

@@ -93,6 +93,8 @@ class IndexManager(CachedFileDB):
       Returns a dict with the files that need to be indexed.
     """
     self._read()
+    if self.data is None:
+      self.data = {}
 
     files = self._scan_folder(root)
     self.cache.update(files)
@@ -102,7 +104,7 @@ class IndexManager(CachedFileDB):
     for filename, last_modified in files.items():
       if filename not in self.data:
         to_add.append(filename)
-      elif last_modified > self.indexed[filename]:
+      elif last_modified > self.data[filename]:
         to_update.append(filename)
     for filename in self.data:
       if filename.startswith(root) and filename not in files:
@@ -121,13 +123,15 @@ class IndexManager(CachedFileDB):
       Marks one or more files as indexed.
     """
     self._read()
+    if self.data is None:
+      self.data = {}
 
     for filename in updated:
       # What was this file's last_modified timestamp?
       if filename in self.cache:
         last_modified = self.cache.pop(filename)
       else:
-        last_modified = os.stat(path).st_mtime
+        last_modified = os.stat(filename).st_mtime
       self.data[filename] = last_modified
 
     for filename in removed:
