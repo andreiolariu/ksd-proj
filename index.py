@@ -4,7 +4,7 @@ from datetime import datetime
 import lucene
 
 from libs.textcat import NGram, _NGram
-from libs.indexmanager import IndexManager
+from libs.indexmanager import IndexManager, FolderManager
 from config import *
 from libs.filehandle import get_files
 
@@ -24,11 +24,12 @@ class IndexFiles(object):
 
   def __init__(self):
     # Create index directory
+    lucene.initVM(lucene.CLASSPATH)
     if not os.path.exists(STORE_DIR):
       os.mkdir(STORE_DIR)
     self.store = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
     
-  def index(self, root):
+  def index(self, root, file=None):
     ''' 
       Index files in the folder root
     '''
@@ -38,7 +39,10 @@ class IndexFiles(object):
     
     # Get list of files indexed
     im = IndexManager()
-    history = im.get_files_to_index(root)
+    if file is None:
+      history = im.get_files_to_index(root)
+    else:
+      history = file
     print '\n%s files to be indexed' % len(history['+'])
     
     # Get content for all files
@@ -139,12 +143,28 @@ if __name__ == '__main__':
   if len(sys.argv) < 2:
     print IndexFiles.__doc__
     sys.exit(1)
+
+  if sys.argv[1] == 'add_file':
+    print 'Adaug'
+    indexer = IndexFiles()
+    indexer.index(None, {'+': [sys.argv[2]], '-':[]})
+    exit(0)
+  if sys.argv[1] == 'delete_file':
+    print 'Sterg'
+    indexer = IndexFiles()
+    indexer.index(None, {'-': [sys.argv[2]], '+':[]})
+    exit(0)
+  if sys.argv[1] == 'modify_file':
+    indexer = IndexFiles()
+    indexer.index(None, {'+': [sys.argv[2]], '-': [sys.argv[2]]})
+    exit(0)
+
   # Start Java VM
-  lucene.initVM(lucene.CLASSPATH)
-  print 'lucene', lucene.VERSION
+  #print 'lucene', lucene.VERSION
   start = datetime.now()
   #try:
   indexer = IndexFiles()
+  FolderManager().follow(sys.argv[1])
   indexer.index(sys.argv[1])
   end = datetime.now()
   print end - start
