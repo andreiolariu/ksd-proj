@@ -3,16 +3,7 @@ import os, commands
 from libs.utils import strip_tags, get_md5
 from config import *
 
-def get_last_modified(root):
-  ''' Gets the latest last_modified timestamp for the files in a folder ''' 
-  last_modified = 0
-  for root, dirnames, filenames in os.walk(root):
-    for filename in filenames:
-      path = os.path.join(root, filename)
-      last_modified = max(last_modified, os.stat(path).st_mtime)
-  return last_modified
-
-def get_files(root, history):
+def get_files(history):
   ''' Create a list of file dictionaries containing path and content 
   Skip files which didn't change from the last indexation
   '''

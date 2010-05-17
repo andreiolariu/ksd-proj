@@ -28,28 +28,34 @@ class IndexFiles(object):
     if not os.path.exists(STORE_DIR):
       os.mkdir(STORE_DIR)
     self.store = lucene.SimpleFSDirectory(lucene.File(STORE_DIR))
+    self.im = IndexManager()
     
-  def index(self, root, file=None):
+  def index_files(self, add=[], remove=[]):
     ''' 
-      Index files in the folder root
+      Index (add/remove/update) a given list of files
     '''
     # Show ticker
-    ticker = Ticker()
-    threading.Thread(target=ticker.run).start()
+    #ticker = Ticker()
+    #threading.Thread(target=ticker.run).start()
+    history = {'+': add,
+               '-': remove}
+    self.__index(history)
     
+  def index_folder(self, folder):
+    '''
+      Index a folder
+    '''
     # Get list of files indexed
-    im = IndexManager()
-    if file is None:
-      history = im.get_files_to_index(root)
-    else:
-      history = file
+    history = self.im.get_files_to_index(folder)
     print '\n%s files to be indexed' % len(history['+'])
+    self.__index(history)
     
+  def __index(self, history):
     # Get content for all files
     print '\nFetching content'
-    docs = self.fetch_files(root, history)
+    docs = self.__fetch_files(history)
     # Detect language for each file and group by it
-    batches = self.detect_language(docs)
+    batches = self.__detect_language(docs)
     
     # Remove missing and updated files
     if history['-']:
@@ -61,7 +67,7 @@ class IndexFiles(object):
         print 'deleted %s' % path
       writer.optimize()
       writer.close()
-      im.mark_as_indexed([], history['-'])
+      self.im.mark_as_indexed([], history['-'])
     
     # For each batch of files with the same language, analyze and index it
     for language, batch in batches.iteritems():
@@ -86,11 +92,11 @@ class IndexFiles(object):
         indexed.append(document['path'])
       writer.optimize()
       writer.close()
-      im.mark_as_indexed(indexed, [])
+      self.im.mark_as_indexed(indexed, [])
     
-    ticker.tick = False
+    #ticker.tick = False
 
-  def detect_language(self, docs):
+  def __detect_language(self, docs):
     '''
       Adds a 'language' field to documents which have content in a supported
       language
@@ -114,8 +120,8 @@ class IndexFiles(object):
       batches[language].append(doc)
     return batches
         
-  def fetch_files(self, root, history):
-    files_list = get_files(root, history)
+  def __fetch_files(self, history):
+    files_list = get_files(history)
     docs = []
     for f in files_list:
       try:
@@ -143,16 +149,16 @@ if __name__ == '__main__':
   if sys.argv[1] == 'add_file':
     print 'Adaug'
     indexer = IndexFiles()
-    indexer.index(None, {'+': [sys.argv[2]], '-':[]})
+    indexer.index_files(add=[sys.argv[2]])
     exit(0)
   if sys.argv[1] == 'delete_file':
     print 'Sterg'
     indexer = IndexFiles()
-    indexer.index(None, {'-': [sys.argv[2]], '+':[]})
+    indexer.index_files(remove=[sys.argv[2]])
     exit(0)
   if sys.argv[1] == 'modify_file':
     indexer = IndexFiles()
-    indexer.index(None, {'+': [sys.argv[2]], '-': [sys.argv[2]]})
+    indexer.index_files(add=[sys.argv[2]], remove=[sys.argv[2]])
     exit(0)
 
   # Start Java VM
@@ -161,7 +167,7 @@ if __name__ == '__main__':
   #try:
   indexer = IndexFiles()
   FolderManager().follow(sys.argv[1])
-  indexer.index(sys.argv[1])
+  indexer.index_folder(sys.argv[1])
   end = datetime.now()
   print end - start
   #except Exception, e:
