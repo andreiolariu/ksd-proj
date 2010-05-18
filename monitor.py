@@ -63,9 +63,9 @@ class Monitor(object):
         data = None
       if data:
         if data[0] == '+':
-          indexer.index(None, {'+': [data[1]], '-':[]})
+          indexer.index_files(add=[data[1]])
         else:
-          indexer.index(None, {'-': [data[1]], '+':[]})
+          indexer.index_files(remove=[data[1]])
       time.sleep(5)
 
   def sigint_handler(self, signal, frame):
