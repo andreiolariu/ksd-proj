@@ -96,6 +96,7 @@ class IndexManager(CachedFileDB):
         if ok_to_index(filename):
           path = os.path.join(root, filename)
           last_modified = os.stat(path).st_mtime
+          path = path.decode('utf-8')
           files[path] = last_modified
     return files
 

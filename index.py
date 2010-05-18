@@ -146,21 +146,6 @@ if __name__ == '__main__':
     print IndexFiles.__doc__
     sys.exit(1)
 
-  if sys.argv[1] == 'add_file':
-    print 'Adaug'
-    indexer = IndexFiles()
-    indexer.index_files(add=[sys.argv[2]])
-    exit(0)
-  if sys.argv[1] == 'delete_file':
-    print 'Sterg'
-    indexer = IndexFiles()
-    indexer.index_files(remove=[sys.argv[2]])
-    exit(0)
-  if sys.argv[1] == 'modify_file':
-    indexer = IndexFiles()
-    indexer.index_files(add=[sys.argv[2]], remove=[sys.argv[2]])
-    exit(0)
-
   # Start Java VM
   #print 'lucene', lucene.VERSION
   start = datetime.now()
