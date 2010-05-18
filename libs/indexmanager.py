@@ -51,8 +51,11 @@ class FolderManager(CachedFileDB):
     if self.data is None:
       self.data = []
     for following in self.data:
+      parent = following
+      if not parent.endswith('/'):
+        parent += '/'
       # We are already following one this folder through one of its parents.
-      if path.startswith(following):
+      if path.startswith(parent):
         return
     self.data.append(path)
     self._save()
