@@ -56,6 +56,7 @@ class Monitor(object):
       for folder in self.manager.get_followed():
         mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY
         self.wm.add_watch(folder, mask, rec=True)
+        print 'Monitoring folder %s...' % folder
       try:
         data = self.queue.get(False)
       except:
@@ -73,6 +74,7 @@ class Monitor(object):
     self.runsignal = False
 
 if __name__ == '__main__':
+  print 'Starting monitor...'
   monitor = Monitor()
   monitor.run()
   print 'Monitor stopped.'
