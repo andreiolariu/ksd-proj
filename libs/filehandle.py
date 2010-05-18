@@ -29,7 +29,7 @@ def get_files(history):
     if start < stop:
       get_content(files[start:stop])
   return files
-  
+
 def ok_to_index(filename):
   ''' Decide if to index the content or skip it'''
   extension = filename.split('.')[-1]
@@ -54,8 +54,8 @@ def get_content(files):
     if '<html' not in piece:
       print 'weird content: %s' % piece[:100]
       continue
-    
-    try:  
+
+    try:
       path, content = piece.split('</argument>')
       path = path.replace('\n', ' ')
       # Strip tags
@@ -63,13 +63,10 @@ def get_content(files):
       content = content.strip()
     except:
       print 'weird: %s' % piece[:100]
-    key = get_md5(path)                    
-    content_dex[key] = content
+    content_dex[path] = content
   # Add content to file dictionaries
   for f in files:
-    key = get_md5(f['path'])
+    key = f['path']
     if key not in content_dex:
       print 'no content for %s' % f['path']
-    f['content'] = content_dex.get(key, '') 
-  
-
+    f['content'] = content_dex.get(key, '')
