@@ -45,12 +45,13 @@ def get_content(files):
   for f in files:
     command += ' "%s"' % f['path']
   # Get output
-  output = commands.getoutput(command)
+  output = commands.getoutput(command.encode('utf-8'))
   # The output for each file has the following structure:
   #<argument>file-path</argument><html>...content</html>
   output = output.strip('\n').split('<argument>')[2:]
-  content_dex = {}
+  idx = 0
   for piece in output:
+    content = ''
     try:
       path, content = piece.split('</argument>')
       path = path.replace('\n', ' ')
@@ -59,10 +60,7 @@ def get_content(files):
       content = content.strip()
     except:
       print 'weird: %s' % piece[:100]
-    content_dex[path] = content
-  # Add content to file dictionaries
-  for f in files:
-    key = f['path']
-    if key not in content_dex:
-      print 'no content for %s' % f['path']
-    f['content'] = content_dex.get(key, '')
+    if not content:
+      print 'no content for %s' % files[idx]['path']
+    files[idx]['content'] = content
+    idx += 1
