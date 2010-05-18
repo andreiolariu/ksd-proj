@@ -41,7 +41,7 @@ def get_content(files):
     and parse the content returned
   '''
   # Create command
-  command = 'java -jar vendor/tika-app-0.7.jar -x'
+  command = 'java -jar vendor/tika-app-0.7.jar -t'
   for f in files:
     command += ' "%s"' % f['path']
   # Get output
@@ -51,10 +51,6 @@ def get_content(files):
   output = output.strip('\n').split('<argument>')[2:]
   content_dex = {}
   for piece in output:
-    if '<html' not in piece:
-      print 'weird content: %s' % piece[:100]
-      continue
-
     try:
       path, content = piece.split('</argument>')
       path = path.replace('\n', ' ')
