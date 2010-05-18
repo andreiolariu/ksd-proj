@@ -10,7 +10,7 @@ def parse_command(command):
   '''
     Receives the input line command given by the user and parses it to get
     the keyword and the languages to search in
-    
+
     Command examples:
       keyword  --> searches in the default language
       keyword -l all  --> searches in all languages
@@ -43,7 +43,7 @@ def run(searcher, keyword, languages):
   else:
     print "Searching for \"%s\" in %s languages" % \
             (keyword, len(languages))
-  
+
   # Construct a list of search results for the requested languages
   scoreDocs = []
   total_count = 0
@@ -55,11 +55,11 @@ def run(searcher, keyword, languages):
                               analyzer_content).parse(keyword)
     analyzer_title = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
     query_title = lucene.WildcardQuery(lucene.Term("name", "*%s*" % keyword))
-    
+
     query = lucene.BooleanQuery()
     query.add(query_content, lucene.BooleanClause.Occur.SHOULD)
     query.add(query_title, lucene.BooleanClause.Occur.SHOULD)
-            
+
     results = searcher.search(query, filter, 50).scoreDocs
     if len(results) > 0:
       total_count += len(results)
@@ -68,7 +68,7 @@ def run(searcher, keyword, languages):
                         'results': results,
                         'language': language})
   print "%s total matching documents." % total_count
-  
+
   # Format and print the results with excerpt highlighting
   formatter = lucene.SimpleHTMLFormatter("<<<", ">>>")
   fragmenter = lucene.SimpleFragmenter(50)
@@ -90,13 +90,13 @@ def run(searcher, keyword, languages):
 
 if __name__ == '__main__':
   lucene.initVM()
-  print 'lucene', lucene.VERSION
+
   passed = time.time() - get_last_modified(STORE_DIR)
-  
+
   args = sys.argv[1:]
   args = ' '.join(args)
   keyword, languages = parse_command(args)
-  
+
   passed = int(passed / 86400)
   if passed == 0:
     print 'Index updated less than a day ago.'
@@ -108,4 +108,3 @@ if __name__ == '__main__':
   searcher = lucene.IndexSearcher(directory, True)
   run(searcher, keyword, languages)
   searcher.close()
-
