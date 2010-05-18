@@ -50,6 +50,8 @@ class FolderManager(CachedFileDB):
     self._read()
     if self.data is None:
       self.data = []
+    if path in self.data:
+      return
     for following in self.data:
       parent = following
       if not parent.endswith('/'):
