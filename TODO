@@ -1,5 +1,27 @@
-python index.py FOLDER
--> FolderManager.follow(folder)
+Fisiere test:
+  1) pdf engleza
+  2) txt cod C
+  3) pdf romana
+  4) doc franceza - introduction, espece (diacritice)
+  5) html spaniola - habitual -> habituales (stemming)
+
+1) add to folder
+2) python index.py folder
+3) search
+4) start monitor
+  4.1) add to folder
+  4.2) search just added
+  4.3) remove from folder
+  4.4) search just removed
+5) stop monitor
+6) test update.sh
+  6.1) add to folder
+  6.2) search (newly added -> not found)
+  6.3) remove from folder
+  6.4) update.sh
+  6.5) search added + removed
 
 
-update.sh
+ksh-uieli:
+.scos get_last_modified (desi inca se folosea)
+.nu e nevoie sa faci dex[md5(obj)] = value - se ocupa dict-ul :)
