@@ -30,24 +30,36 @@ class HandleEvents(pyinotify.ProcessEvent):
       self.lrucache[pathname] = time.time()
       return time.time() - last_detection < 2
 
-    def process_IN_CREATE(self, event):
-      if self.recent(event.pathname):
+    def process(self, pathname, operation):
+      if self.recent(pathname):
         return
+      if operation == 'add':
+        self.queue.put(('+', pathname))
+      elif operation == 'remove':
+        self.queue.put(('-', pathname))
+      else:
+        self.queue.put(('-', pathname))
+        self.queue.put(('+', pathname))
+
+    def process_IN_CREATE(self, event):
       print "Creating:", event.pathname
-      self.queue.put(('+', event.pathname))
+      self.process(event.pathname, 'add')
 
     def process_IN_DELETE(self, event):
-      if self.recent(event.pathname):
-        return
       print "Removing:", event.pathname
-      self.queue.put(('-', event.pathname))
+      self.process(event.pathname, 'remove')
 
     def process_IN_MODIFY(self, event):
-      if self.recent(event.pathname):
-        return
       print "Modifying:", event.pathname
-      self.queue.put(('-', event.pathname))
-      self.queue.put(('+', event.pathname))
+      self.process(event.pathname, 'update')
+
+    def process_IN_MOVED_FROM(self, event):
+      print "Moving out:", event.pathname
+      self.process(event.pathname, 'remove')
+
+    def process_IN_MOVED_TO(self, event):
+      print "Moving to:", event.pathname
+      self.process(event.pathname, 'add')
 
 class Monitor(object):
 
@@ -69,7 +81,9 @@ class Monitor(object):
     while self.runsignal:
       for folder in self.manager.get_followed():
         if not self.wm.get_wd(folder):
-          mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | pyinotify.IN_MODIFY #| pyinotify.IN_MOVED_TO
+          mask = pyinotify.IN_DELETE | pyinotify.IN_CREATE | \
+                 pyinotify.IN_MODIFY | pyinotify.IN_MOVED_TO | \
+                 pyinotify.IN_MOVE_SELF | pyinotify.IN_MOVED_FROM
           self.wm.add_watch(folder, mask, rec=True)
           print 'Monitoring folder %s...' % folder
       try:
